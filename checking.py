@@ -1,3 +1,5 @@
+import sys # Added for sys.stderr, as other functions may use it.
+
 def find_parallel_perfect_intervals(melody1, melody2):
     """
     Finds parallel perfect intervals (P1, P4, P5, P8) between two MIDI note lists.
@@ -106,3 +108,74 @@ def find_parallel_motives(melody1, melody2, min_consecutive_moves=3):
             measure_start = i + 1
             measure_end = i + min_consecutive_moves + 1
             findings_list.append(f"{measure_start}-{measure_end}")
+
+def check_voice_spacing_crossing_overlapping(melody1, melody2):
+    """
+
+    Args:
+        melody1 (list): List of MIDI note numbers for the (nominally) upper voice.
+        melody2 (list): List of MIDI note numbers for the (nominally) lower voice.
+
+    Returns:
+        - False if no issues are found.
+        - Tuple (True, report_string) if issues are found, where report_string
+          lists each occurrence.
+    """
+    findings_list = []
+
+    length = min(len(melody1), len(melody2))
+    if length == 0:
+        return False # Nothing to check
+
+    # Define the maximum allowed interval (Octave + Major Third = 12 + 4 = 16 semitones)
+    # "Wider than" this means interval > MAX_ALLOWED_INTERVAL.
+    MAX_ALLOWED_INTERVAL = 16
+
+    for i in range(length):
+        upper_note_i = melody1[i]
+        lower_note_i = melody2[i]
+
+        # Skip if either note at current position is a rest (None)
+        if upper_note_i is None or lower_note_i is None:
+            continue
+
+        # 1. Check for vertical interval wider than an octave and a major third
+        interval = abs(upper_note_i - lower_note_i)
+        if interval > MAX_ALLOWED_INTERVAL:
+            findings_list.append(
+                f"mm {{{i+1}}} vertical interval too wide (actual: {interval} semitones, max allowed: {MAX_ALLOWED_INTERVAL})"
+            )
+
+        # 2. Check for voice crossing
+        # Assumes melody1 is upper voice, melody2 is lower voice.
+        # Crossing occurs if lower voice is pitched higher than upper voice.
+        if lower_note_i > upper_note_i:
+            findings_list.append(
+                f"mm {{{i+1}}} voice crossing (lower voice at {lower_note_i} is above upper voice at {upper_note_i})"
+            )
+
+        # 3. Check for voice overlapping (needs previous note, so start from i > 0)
+        if i > 0:
+            upper_note_prev = melody1[i-1]
+            lower_note_prev = melody2[i-1]
+
+            # Check current lower voice note against previous upper voice note
+            # Ensure previous upper note was not a rest before comparing
+            if upper_note_prev is not None and lower_note_i > upper_note_prev:
+                findings_list.append(
+                    f"mm {{{i+1}}} voice overlapping (lower voice at {lower_note_i} is above previous upper voice note at {upper_note_prev})"
+                )
+
+            # Check current upper voice note against previous lower voice note
+            # Ensure previous lower note was not a rest before comparing
+            if lower_note_prev is not None and upper_note_i < lower_note_prev:
+                 findings_list.append(
+                    f"mm {{{i+1}}} voice overlapping (upper voice at {upper_note_i} is below previous lower voice note at {lower_note_prev})"
+                )
+
+    if not findings_list:
+        return False
+    else:
+        # Join findings into a single string, each on a new line
+        output_string = "\n".join(findings_list)
+        return True, output_string.strip()

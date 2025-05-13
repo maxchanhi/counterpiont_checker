@@ -1,3 +1,6 @@
+import re
+import sys  # Added import for sys.stderr
+
 def note_to_midi(note_str):
 
     if not note_str or note_str.lower() == 'r': # Handle rests or empty strings
@@ -84,5 +87,43 @@ def extract_melodies_from_ly(lilypond_content):
                  midi_notes.append(None)
 
         melodies[staff_name] = midi_notes
+    print(melodies)
+    return melodies # Return in a dic of midi numbers eg:{'Counterpoint': [79, 83, 81, 83, 72, 76, 84, 83, 79, 77, 79], 'CantusFirmus': [60, 62, 65, 64, 65, 67, 69, 67, 64, 62, 60]}
 
-    return melodies
+testmelody = r"""\version "2.24.4"
+\header {
+  title = "First Species Counterpoint Example"
+  subtitle = "Counterpoint Above CF in C Major"
+}
+
+\score {
+  <<
+    \new Staff = "Counterpoint" <<
+      \clef treble
+      \key c \major
+      \time 4/4
+      \fixed c {
+        g'1 | b'1 | a'1 | b'1 | c'1 | e'1 | c''1 | b'1 | g'1 | f'1 | g'1
+      }
+    >>
+    \new Staff = "CantusFirmus" <<
+      \clef bass
+      \key c \major
+      \time 4/4
+      \fixed c {
+        c1 | d1 | f1 | e1 | f1 | g1 | a1 | g1 | e1 | d1 | c1
+      }
+    >>
+  >>
+  \layout { }
+}
+"""
+
+#apply the function to test the testmelody
+melodies = extract_melodies_from_ly(testmelody)
+
+# Print the extracted melodies in a more readable format
+print("\nExtracted Melodies:")
+for staff_name, notes in melodies.items():
+    print(f"\n{staff_name}:")
+    print(f"MIDI notes: {notes}")
