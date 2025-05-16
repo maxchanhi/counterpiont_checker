@@ -1,5 +1,5 @@
 import sys # Added for sys.stderr, as other functions may use it.
-
+from get_melody import extract_melodies_from_ly
 def find_parallel_perfect_intervals(melody1, melody2):
     """
     Finds parallel perfect intervals (P1, P4, P5, P8) between two MIDI note lists.
@@ -110,17 +110,7 @@ def find_parallel_motives(melody1, melody2, min_consecutive_moves=3):
             findings_list.append(f"{measure_start}-{measure_end}")
 
 def check_voice_spacing_crossing_overlapping(melody1, melody2):
-    """
 
-    Args:
-        melody1 (list): List of MIDI note numbers for the (nominally) upper voice.
-        melody2 (list): List of MIDI note numbers for the (nominally) lower voice.
-
-    Returns:
-        - False if no issues are found.
-        - Tuple (True, report_string) if issues are found, where report_string
-          lists each occurrence.
-    """
     findings_list = []
 
     length = min(len(melody1), len(melody2))
@@ -179,3 +169,64 @@ def check_voice_spacing_crossing_overlapping(melody1, melody2):
         # Join findings into a single string, each on a new line
         output_string = "\n".join(findings_list)
         return True, output_string.strip()
+
+score=r"""\version "2.24.4"
+\header {
+  title = "First Species Counterpoint Example"
+  subtitle = "Counterpoint Above CF in C Major"
+}
+
+\score {
+  <<
+    \new Staff = "Counterpoint" <<
+      \clef treble
+      \key c \major
+      \time 4/4
+      \fixed c {
+        g'1 | b'1 | a'1 | b'1 | c'1 | e'1 | c''1 | b'1 | g'1 | f'1 | g'1
+      }
+    >>
+    \new Staff = "CantusFirmus" <<
+      \clef bass
+      \key c \major
+      \time 4/4
+      \fixed c {
+        c1 | d1 | f1 | e1 | f1 | g1 | a1 | g1 | e1 | d1 | c1
+      }
+    >>
+  >>
+  \layout { }
+}
+"""
+
+print(extract_melodies_from_ly(score))
+
+score2=r"""\version "2.24.4"
+\header {
+  title = "First Species Counterpoint Example"
+  subtitle = "Counterpoint Above CF in C Major"
+}
+
+\score {
+  <<
+    \new Staff = "Counterpoint" <<
+      \clef treble
+      \key c \major
+      \time 4/4
+      \fixed c' { 
+        g1 | f'1 | e'1 | g'1 | a'1 | f'1 | e'1 | b1 | d'1 | b'1 | c'1
+      }
+    >>
+    \new Staff = "CantusFirmus" <<
+      \clef bass
+      \key c \major
+      \time 4/4
+      \fixed c { 
+        c1 | d1 | f1 | e1 | f1 | g1 | a1 | g1 | e1 | d1 | c1
+      }
+    >>
+  >>
+  \layout { }
+}"""
+
+print(extract_melodies_from_ly(score2))
