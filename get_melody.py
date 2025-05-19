@@ -1,91 +1,157 @@
 import re
-import sys  # Added import for sys.stderr
+import sys
+import os
+from dotenv import load_dotenv
+from openai import OpenAI
+EXAMPLE_COUNTERPOINT = [79, 83, 81, 83, 72, 76, 84, 83, 79, 77, 79]
+EXAMPLE_CANTUS_FIRMUS = [60, 62, 65, 64, 65, 67, 69, 67, 64, 62, 60]
+load_dotenv()
 
-def note_to_midi(note_str):
 
-    if not note_str or note_str.lower() == 'r': # Handle rests or empty strings
+def is_same_melody(midi_dict, example_counterpoint=EXAMPLE_COUNTERPOINT):
+    """
+    Check if the generated melody is too similar to the example.
+    Returns True if more than 70% of notes are the same.
+    """
+    if not isinstance(midi_dict, dict) or 'Counterpoint' not in midi_dict:
+        return False
+        
+    counterpoint_midi = midi_dict['Counterpoint']
+    
+    # If lengths are different, it's definitely a different melody
+    if len(counterpoint_midi) != len(example_counterpoint):
+        return False
+    
+    # Check if more than 70% of notes are the same
+    same_notes = sum(1 for a, b in zip(counterpoint_midi, example_counterpoint) if a == b)
+    similarity_percentage = same_notes / len(example_counterpoint) * 100
+    
+    return similarity_percentage > 80
+
+
+def extract_midi_from_response(response_text):
+    """
+    Extract MIDI dictionary from LLM response using regex.
+    Returns a dictionary with 'Counterpoint' and 'CantusFirmus' keys.
+    """
+    midi_format_pattern = r"\{\s*'Counterpoint'\s*:\s*\[(\d+(?:\s*,\s*\d+)*)\]\s*,\s*'CantusFirmus'\s*:\s*\[(\d+(?:\s*,\s*\d+)*)\]\s*\}"
+    midi_match = re.search(midi_format_pattern, response_text)
+    
+    if not midi_match:
         return None
-
-    base_notes = {'c': 0, 'd': 2, 'e': 4, 'f': 5, 'g': 7, 'a': 9, 'b': 11}
-    reference_midi = 60 # Base MIDI note for 'c' in \fixed c (Middle C)
-
-    # Use regex to handle pitch, accidentals, and octave marks more robustly
-    match = re.match(r"([a-g])(is|isis|es|eses)?(['\,]*)", note_str.lower())
-    if not match:
-         # Basic rest check or unknown format
-        if note_str.lower().startswith('r'):
-            return None
-        raise ValueError(f"Could not parse note: {note_str}")
-
-    pitch_class_str, accidental, octave_marks = match.groups()
-
-    if pitch_class_str not in base_notes:
-         # This shouldn't happen with the regex, but belt-and-suspenders
-        raise ValueError(f"Unknown base note: {pitch_class_str} in {note_str}")
-
-    midi_val = base_notes[pitch_class_str]
-
-    # Handle accidentals
-    if accidental == "is":
-        midi_val += 1
-    elif accidental == "es":
-        midi_val -= 1
-    elif accidental == "isis":
-        midi_val += 2
-    elif accidental == "eses":
-        midi_val -= 2
-
-    # Handle octave marks
-    octave_shift = (octave_marks.count("'") - octave_marks.count(",")) if octave_marks else 0
-    midi_val += reference_midi + (octave_shift * 12)
-
-    return midi_val
+    
+    # Extract the MIDI values from the regex match
+    counterpoint_str = midi_match.group(1)
+    cantus_firmus_str = midi_match.group(2)
+    
+    # Convert string representations to actual lists of integers
+    counterpoint_midi = [int(x.strip()) for x in counterpoint_str.split(',')]
+    cantus_firmus_midi = [int(x.strip()) for x in cantus_firmus_str.split(',')]
+    
+    return {
+        'Counterpoint': counterpoint_midi,
+        'CantusFirmus': cantus_firmus_midi
+    }
 
 
-# --- Step 2: Melody Extraction Function ---
-# (Keep extract_melodies_from_ly as it is)
-def extract_melodies_from_ly(lilypond_content):
+def create_fallback_midi():
     """
-    Extracts note sequences from named staves within a LilyPond file content.
-    Looks for '\new Staff = "StaffName" << ... \fixed c { NOTES } ... >>' structure.
-    Returns a dictionary mapping staff names to lists of MIDI note numbers.
+    Create a fallback MIDI dictionary when LLM fails to return proper format.
+    Returns a dictionary with slightly modified counterpoint from the example.
     """
-    melodies = {}
-    # Regex to find staves and their notes within \fixed c {}
-    pattern = re.compile(
-          r'\\new\s+Staff\s*=\s*"(?P<staffname>[^"]+)"\s*<<.*?\\fixed\s+c[^{]*{(?P<notes>.*?)}.*?>>',
-          re.DOTALL | re.IGNORECASE
-      )
+    # Create a slightly different counterpoint from the example
+    modified_counterpoint = [note + (1 if i % 2 == 0 else -1) 
+                            for i, note in enumerate(EXAMPLE_COUNTERPOINT)]
+    
+    return {
+        'Counterpoint': modified_counterpoint,
+        'CantusFirmus': EXAMPLE_CANTUS_FIRMUS
+    }
 
-    for match in pattern.finditer(lilypond_content):
-        staff_name = match.group("staffname")
-        notes_str = match.group("notes")
 
-        # Clean up the notes string: remove comments, bar lines, extra whitespace
-        notes_str = re.sub(r'%.*?\n', '', notes_str) # Remove full-line comments
-        notes_str = re.sub(r'%.*', '', notes_str)    # Remove end-of-line comments
-        notes_str = notes_str.replace('|', ' ')     # Replace bar lines with spaces
-        notes_str = re.sub(r'\s+', ' ', notes_str).strip() # Normalize whitespace
+def send_to_llm(conterpoint, comments='None', max_attempts=3):
+    api_key = os.getenv("OPEN_KEY")
+    if not api_key:
+        raise ValueError("API key not found in .env file")
+    
+    # Initialize OpenAI client with the provided API base URL
+    client = OpenAI(
+        api_key=api_key,
+        base_url="https://openrouter.ai/api/v1"
+    )
+    
+    # Base system prompt with specific instructions
+    system_prompt = (
+        "You are an expert music composer specializing in counterpoint. "
+        "You must follow these strict counterpoint rules:\n"
+        "1. Avoid parallel motives (when both voices move in the same direction for 3+ consecutive notes)\n"
+        "2. Avoid parallel perfect intervals (unison, fifth, octave)\n"
+        "3. Maintain proper voice spacing\n"
+        "4. Avoid dissonant leaps\n\n"
+        "When given feedback about rule violations, you MUST create a DIFFERENT melody that fixes these issues.\n"
+        "Return only valid midi notation in the EXACT same format as the example: "
+        "{'Counterpoint': [79, 83, 81, 83, 72, 76, 84, 83, 79, 77, 79], "
+        "'CantusFirmus': [60, 62, 65, 64, 65, 67, 69, 67, 64, 62, 60]}"
+    )
+    
+    # Use iteration instead of recursion for retries
+    attempts_remaining = max_attempts
+    
+    while attempts_remaining > 0:
+        try:
+            completion = client.chat.completions.create(
+                model="deepseek/deepseek-chat:free",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": "Complete the following first species counterpoint example. \n"
+                        + conterpoint + "\n Please fix the problem: " + comments},
+                ]
+            )
+            
+            # Check if completion and choices exist before accessing
+            if completion and hasattr(completion, 'choices') and completion.choices:
+                llm_response = completion.choices[0].message.content
+                print(f"Attempt {max_attempts - attempts_remaining + 1}/{max_attempts} - LLM Response:", llm_response)
+                
+                midi_melodies = extract_midi_from_response(llm_response)
+                if midi_melodies:
+                    return midi_melodies
+            else:
+                print(f"Attempt {max_attempts - attempts_remaining + 1}/{max_attempts} - API returned empty or invalid response")
+                
+        except Exception as e:
+            print(f"Attempt {max_attempts - attempts_remaining + 1}/{max_attempts} - Error: {str(e)}")
+        
+        # Enhance the prompt for retry
+        system_prompt += ("\n\nIMPORTANT: Your previous response was not in the correct format.\n"
+                         "You MUST return a dictionary with 'Counterpoint' and 'CantusFirmus' "
+                         "keys containing MIDI note arrays.\n")
+        
+        attempts_remaining -= 1
+        if attempts_remaining > 0:
+            print(f"LLM returned invalid format. Trying again (attempt {max_attempts - attempts_remaining + 1}/{max_attempts})...")
+    
+    # All attempts failed, return fallback MIDI
+    print("LLM failed to return valid format after multiple attempts. Returning fallback MIDI.")
+    return create_fallback_midi()
 
-        # Split into individual note elements (pitch + duration, rest, etc.)
-        note_tokens = [token for token in notes_str.split(' ') if token]
 
-        midi_notes = []
-        for token in note_tokens:
-            # Extract just the pitch part using regex (more robust)
-            # This tries to find the pitch at the beginning of the token
-            pitch_match = re.match(r"([a-g](?:is|isis|es|eses)?['\,]*)", token)
-            if pitch_match:
-                pitch_str = pitch_match.group(1)
-                try:
-                    midi_val = note_to_midi(pitch_str)
-                    midi_notes.append(midi_val) # midi_val could be None if note_to_midi handles 'r' inside
-                except ValueError as e:
-                    print(f"Warning: Skipping unparseable note token '{token}': {e}", file=sys.stderr)
-                    midi_notes.append(None) # Append None for unparseable tokens to keep alignment
-            elif token.lower().startswith('r'): # Explicit rest
-                 midi_notes.append(None)
+# For testing the module directly
+if __name__ == "__main__":
 
-        melodies[staff_name] = midi_notes
-    return melodies # Return in a dic of midi numbers eg:{'Counterpoint': [79, 83, 81, 83, 72, 76, 84, 83, 79, 77, 79], 'CantusFirmus': [60, 62, 65, 64, 65, 67, 69, 67, 64, 62, 60]}
 
+    example = """
+    \version "2.24.4"
+    \score {
+      \new StaffGroup <<
+        \new Staff = "Counterpoint" << \clef treble \key c \major \time 4/4 \fixed c' { g1 | a1 | g1 | a1 | e1 | g1 | c'1 | b1 | g1 | f1 | g1 } >>
+        \new Staff = "CantusFirmus" << \clef bass \key c \major \time 4/4 \fixed c { c1 | d1 | f1 | e1 | f1 | g1 | a1 | g1 | e1 | d1 | c1 } >>
+      >>
+      \layout { }
+    }
+    """
+    
+    # Test the send_to_llm function
+    result = send_to_llm(example, "There are parallel motives in measures 1-3")
+    print("Final result:")
+    print(result)

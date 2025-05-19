@@ -1,0 +1,145 @@
+def midi_to_lilypond(midi_melodies, output_filename="generated_score.ly", generate_pdf=True):
+    """Convert a dictionary of MIDI note numbers to a LilyPond file and optionally generate a PDF.
+    
+    Args:
+        midi_melodies: Dictionary with keys as voice names and values as lists of MIDI notes
+        output_filename: Name of the output LilyPond file
+        generate_pdf: Whether to generate a PDF file using LilyPond
+    """
+    # MIDI note number to LilyPond note name mapping
+    midi_to_note = {
+        60: "c", 61: "cis", 62: "d", 63: "dis", 64: "e", 65: "f",
+        66: "fis", 67: "g", 68: "gis", 69: "a", 70: "ais", 71: "b",
+        # Lower octave
+        48: "c,", 49: "cis,", 50: "d,", 51: "dis,", 52: "e,", 53: "f,",
+        54: "fis,", 55: "g,", 56: "gis,", 57: "a,", 58: "ais,", 59: "b,",
+        # Higher octave
+        72: "c'", 73: "cis'", 74: "d'", 75: "dis'", 76: "e'", 77: "f'",
+        78: "fis'", 79: "g'", 80: "gis'", 81: "a'", 82: "ais'", 83: "b'", 85: "c''", 86: "cis''", 87: "d''", 88: "dis''", 89: "e''", 90: "f''",
+    }
+    
+    # Create the LilyPond file content - note the raw string and proper escaping
+    lilypond_content = "\\version \"2.24.4\"\n"
+    lilypond_content += "\\header {\n"
+    lilypond_content += "  title = \"First Species Counterpoint Example\"\n"
+    lilypond_content += "  subtitle = \"Generated from MIDI Notes\"\n"
+    lilypond_content += "}\n\n"
+    lilypond_content += "\\score {\n"
+    lilypond_content += "  <<\n"
+    
+    # Add each voice
+    for voice_name, midi_notes in midi_melodies.items():
+        
+        notes_str = ""
+        for note in midi_notes:
+            if note in midi_to_note:
+                notes_str += f"{midi_to_note[note]}1 | "
+            else:
+                # Handle notes outside our mapping
+                notes_str += "r1 | "  # Use rest as fallback
+        
+        # Remove trailing bar line and space
+        notes_str = notes_str.rstrip("| ")
+        
+        # Add the staff for this voice - note the proper escaping
+        lilypond_content += f"    \\new Staff = \"{voice_name}\" <<\n"
+        lilypond_content += f"      \\clef treble\n"
+        lilypond_content += f"      \\key c \\major\n"
+        lilypond_content += f"      \\time 4/4\n"
+        lilypond_content += f"      \\fixed c' {{ \n"
+        lilypond_content += f"        {notes_str}\n"
+        lilypond_content += f"      }}\n"
+        lilypond_content += f"    >>\n"
+    
+    # Close the score
+    lilypond_content += "  >>\n"
+    lilypond_content += "  \\layout { }\n"
+    lilypond_content += "  \\midi { }\n"
+    lilypond_content += "}\n"
+    
+    # Write to file
+    with open(output_filename, 'w') as f:
+        f.write(lilypond_content)
+    
+    print(f"LilyPond file created: {output_filename}")
+    
+    # Generate PDF if requested
+    if generate_pdf:
+        import os
+        import subprocess
+        
+        try:
+            # Run LilyPond to generate PDF
+            result = subprocess.run(['lilypond', output_filename], 
+                                   capture_output=True, 
+                                   text=True, 
+                                   check=True)
+            
+            # Get the PDF filename (same as LilyPond file but with .pdf extension)
+            pdf_filename = os.path.splitext(output_filename)[0] + '.pdf'
+            
+            if os.path.exists(pdf_filename):
+                print(f"PDF file created: {pdf_filename}")
+            else:
+                print("PDF generation failed. Check if LilyPond is installed correctly.")
+                print(result.stderr)
+        except subprocess.CalledProcessError as e:
+            print(f"Error generating PDF: {e}")
+            print(e.stderr)
+        except FileNotFoundError:
+            print("LilyPond not found. Make sure it's installed and in your PATH.")
+    
+    return lilypond_content
+
+def note_to_midi(note_str): #unused
+    """
+    Convert a LilyPond note string to its MIDI value.
+    Handles pitch, accidentals, and octave marks.
+    Returns None for rests.
+    """
+    if not note_str or note_str.lower() == 'r':  # Handle rests or empty strings
+        return None
+
+    base_notes = {'c': 0, 'd': 2, 'e': 4, 'f': 5, 'g': 7, 'a': 9, 'b': 11}
+    reference_midi = 60  # Base MIDI note for 'c' in \fixed c (Middle C)
+
+    # Use regex to handle pitch, accidentals, and octave marks more robustly
+    match = re.match(r"([a-g])(is|isis|es|eses)?(['\\\,]*)", note_str.lower())
+    if not match:
+        # Basic rest check or unknown format
+        if note_str.lower().startswith('r'):
+            return None
+        raise ValueError(f"Could not parse note: {note_str}")
+
+    pitch_class_str, accidental, octave_marks = match.groups()
+
+    if pitch_class_str not in base_notes:
+        # This shouldn't happen with the regex, but belt-and-suspenders
+        raise ValueError(f"Unknown base note: {pitch_class_str} in {note_str}")
+
+    midi_val = base_notes[pitch_class_str]
+
+    # Handle accidentals
+    if accidental == "is":
+        midi_val += 1
+    elif accidental == "es":
+        midi_val -= 1
+    elif accidental == "isis":
+        midi_val += 2
+    elif accidental == "eses":
+        midi_val -= 2
+
+    # Handle octave marks
+    octave_shift = (octave_marks.count("'") - octave_marks.count(",")) if octave_marks else 0
+    midi_val += reference_midi + (octave_shift * 12)
+
+    return midi_val
+
+# Example usage
+if __name__ == "__main__":
+    # Example MIDI data
+    midi_melodies = {'Counterpoint': [79, 81, 77, 79, 81, 83, 84, 83, 81, 79, 77], 'CantusFirmus': [60, 62, 65, 64, 65, 67, 69, 67, 64, 62, 60]}
+    
+    # Generate LilyPond file and PDF
+    midi_to_lilypond(midi_melodies, "generated_score.ly", generate_pdf=True)
+
