@@ -11,7 +11,7 @@
       \key c \major
       \time 4/4
       \fixed c' { 
-        c'1 | d'1 | e'1 | f'1 | g'1 | a'1 | b'1 | a'1 | g'1 | f'1 | e'1
+        e'1 | b1 | a1 | c'1 | a1 | e'1 | c'1 | e'1 | c'1 | b1 | e'1
       }
     >>
     \new Staff = "CantusFirmus" <<

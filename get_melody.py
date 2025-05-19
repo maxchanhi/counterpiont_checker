@@ -6,7 +6,7 @@ from openai import OpenAI
 EXAMPLE_COUNTERPOINT = [79, 83, 81, 83, 72, 76, 84, 83, 79, 77, 79]
 EXAMPLE_CANTUS_FIRMUS = [60, 62, 65, 64, 65, 67, 69, 67, 64, 62, 60]
 load_dotenv()
-
+MODEL = "deepseek/deepseek-r1:free"
 
 def is_same_melody(midi_dict, example_counterpoint=EXAMPLE_COUNTERPOINT):
     """
@@ -100,7 +100,7 @@ def send_to_llm(conterpoint, comments='None', max_attempts=3):
     while attempts_remaining > 0:
         try:
             completion = client.chat.completions.create(
-                model="deepseek/deepseek-chat:free",
+                model=MODEL,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": "Complete the following first species counterpoint example. \n"
@@ -128,6 +128,7 @@ def send_to_llm(conterpoint, comments='None', max_attempts=3):
                          "keys containing MIDI note arrays.\n")
         
         attempts_remaining -= 1
+        print(llm_response)
         if attempts_remaining > 0:
             print(f"LLM returned invalid format. Trying again (attempt {max_attempts - attempts_remaining + 1}/{max_attempts})...")
     

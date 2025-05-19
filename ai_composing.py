@@ -2,33 +2,7 @@ from get_melody import *
 from checking import *
 from midi_lily import midi_to_lilypond
 import os
-conterpoint = r"""\version "2.24.4"
-\header {
-  title = "First Species Counterpoint Example"
-  subtitle = "Counterpoint Above CF in C Major"
-}
-
-\score {
-  <<
-    \new Staff = "Counterpoint" <<
-      \clef treble
-      \key c \major
-      \time 4/4
-      \fixed c' { 
-        %compose here
-      }
-    >>
-    \new Staff = "CantusFirmus" <<
-      \clef bass
-      \key c \major
-      \time 4/4
-      \fixed c { 
-        c1 | d1 | f1 | e1 | f1 | g1 | a1 | g1 | e1 | d1 | c1
-      }
-    >>
-  >>
-  \layout { }
-}"""
+conterpoint = r"'CantusFirmus': [60, 62, 65, 64, 65, 67, 69, 67, 64, 62, 60]"
 
 # Initial melody generation
 midi_melodies = send_to_llm(conterpoint)
