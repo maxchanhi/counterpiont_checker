@@ -16,7 +16,8 @@ for i in range(max_iterations):
     parallel_motives_result = find_parallel_motives(midi_melodies['Counterpoint'], midi_melodies['CantusFirmus'])
     voice_spacing_result = check_voice_spacing_crossing_overlapping(midi_melodies['Counterpoint'], midi_melodies['CantusFirmus'])
     dissonant_leaps_result = find_dissonant_leaps(midi_melodies['Counterpoint'])
-    
+    dissonant_inteval_result = find_dissonant_interval(midi_melodies['Counterpoint'], midi_melodies['CantusFirmus'])
+    check_octave_inverval_resulte = check_octave_unison_rules(midi_melodies['Counterpoint'], midi_melodies['CantusFirmus'])
     # Collect all issues
     issues = []
     if parallel_intervals_result:
@@ -27,6 +28,10 @@ for i in range(max_iterations):
         issues.append(voice_spacing_result[1])
     if dissonant_leaps_result:
         issues.append(dissonant_leaps_result[1])
+    if dissonant_inteval_result:
+        issues.append(dissonant_inteval_result[1])
+    if check_octave_inverval_resulte:
+        issues.append(check_octave_inverval_resulte[1])
     
     # If no issues found, generate PDF and exit loop
     if not issues:

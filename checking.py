@@ -212,3 +212,178 @@ def find_dissonant_leaps(inputCounterpoint):
     else:
         return True, "\n".join(findings_list)
 
+
+def find_dissonant_interval(inputCounterpoint = [], inputCantusFirmus = []): #find vertical interval is it dissonnant, input as a list of midi number
+    """
+    Identifies dissonant vertical intervals between counterpoint and cantus firmus.
+    
+    Args:
+        inputCounterpoint: List of MIDI note numbers for the counterpoint melody
+        inputCantusFirmus: List of MIDI note numbers for the cantus firmus melody
+        
+    Returns:
+        - False if no dissonant intervals are found
+        - Tuple (True, report_string) if found, where report_string lists occurrences
+    """
+    findings_list = []
+    
+    if not inputCounterpoint or not inputCantusFirmus:
+        print("Warning: One or both melodies are empty.", file=sys.stderr)
+        return False  # No findings possible
+    
+    if len(inputCounterpoint) != len(inputCantusFirmus):
+        print(f"Warning: Melodies have different lengths ({len(inputCounterpoint)} vs {len(inputCantusFirmus)}). Checking up to shortest length.", file=sys.stderr)
+    
+    length = min(len(inputCounterpoint), len(inputCantusFirmus))
+    
+    # Define dissonant intervals (semitones mod 12)
+    dissonant_intervals = {
+        1: "minor second",
+        2: "major second", 
+        6: "tritone",    
+        10: "minor seventh",
+        11: "major seventh"
+    }
+    
+    for i in range(length):
+        cp_note = inputCounterpoint[i]
+        cf_note = inputCantusFirmus[i]
+        
+        if cp_note is None or cf_note is None:
+            continue  # Skip if either note is a rest
+        
+        # Calculate interval
+        interval = abs(cp_note - cf_note)
+        interval_type = interval % 12  # Normalize to within an octave
+        
+        if interval_type in dissonant_intervals:
+            measure = i + 1  # 1-indexed measure number
+            interval_name = dissonant_intervals[interval_type]
+            findings_list.append(
+                f"mm {{{measure}}} dissonant vertical interval: {interval_name}"
+            )
+    
+    if not findings_list:
+        return False
+    else:
+        return True, "\n".join(findings_list)
+
+
+def check_octave_unison_rules(inputCounterpoint=[], inputCantusFirmus=[]):
+    """
+    Checks that octave/unison vertical intervals are only allowed at the beginning and end,
+    and that the last interval is either an octave or unison.
+    
+    Args:
+        inputCounterpoint: List of MIDI note numbers for the counterpoint melody
+        inputCantusFirmus: List of MIDI note numbers for the cantus firmus melody
+        
+    Returns:
+        - False if no issues are found (all rules followed)
+        - Tuple (True, report_string) if issues found, where report_string lists occurrences
+    """
+    findings_list = []
+    
+    if not inputCounterpoint or not inputCantusFirmus:
+        print("Warning: One or both melodies are empty.", file=sys.stderr)
+        return False  # No findings possible
+    
+    if len(inputCounterpoint) != len(inputCantusFirmus):
+        print(f"Warning: Melodies have different lengths ({len(inputCounterpoint)} vs {len(inputCantusFirmus)}). Checking up to shortest length.", file=sys.stderr)
+    
+    length = min(len(inputCounterpoint), len(inputCantusFirmus))
+    if length < 2:
+        return False  # Not enough notes to check
+    
+    # Check middle intervals (not first or last)
+    for i in range(1, length - 1):
+        cp_note = inputCounterpoint[i]
+        cf_note = inputCantusFirmus[i]
+        
+        if cp_note is None or cf_note is None:
+            continue  # Skip if either note is a rest
+        
+        # Calculate interval and normalize to within an octave
+        interval = abs(cp_note - cf_note)
+        interval_type = interval % 12
+        
+        # Check if it's an octave (0) or unison (0)
+        if interval_type == 0:
+            measure = i + 1  # 1-indexed measure number
+            findings_list.append(
+                f"mm {{{measure}}} contains octave/unison vertical interval which is only allowed at beginning and end"
+            )
+    
+    # Check last interval
+    last_cp = inputCounterpoint[length - 1]
+    last_cf = inputCantusFirmus[length - 1]
+    
+    if last_cp is not None and last_cf is not None:
+        last_interval = abs(last_cp - last_cf)
+        last_interval_type = last_interval % 12
+        
+        if last_interval_type != 0:  # Not octave or unison
+            findings_list.append(
+                f"mm {{{length}}} (final measure) does not end with octave or unison interval"
+            )
+    
+    if not findings_list:
+        return False  # No issues found
+    else:
+        return True, "\n".join(findings_list)
+
+
+def check_key_adherence(inputCounterpoint=[], key_root=60, is_minor=False):
+    """
+    Checks if all notes in the counterpoint melody adhere to the specified key.
+    For minor keys, considers natural minor and melodic minor (raised 6th and 7th ONLY when ascending).
+    
+    Args:
+        inputCounterpoint: List of MIDI note numbers for the counterpoint melody
+        key_root: MIDI note number of the key root (e.g., 60 for C)
+        is_minor: Boolean indicating if the key is minor (True) or major (False)
+        
+    Returns:
+        - False if all notes adhere to the key
+        - Tuple (True, report_string) if issues found, where report_string lists occurrences
+    """
+    findings_list = []
+    
+    if not inputCounterpoint:
+        print("Warning: Counterpoint melody is empty.", file=sys.stderr)
+        return False
+    
+    major_scale = [0, 2, 4, 5, 7, 9, 11]
+    natural_minor_scale = [0, 2, 3, 5, 7, 8, 10]
+    melodic_minor_ascending_scale = [0, 2, 3, 5, 7, 9, 11] # Raised 6th and 7th
+    
+    note_names = ["C", "C#/Db", "D", "D#/Eb", "E", "F", "F#/Gb", "G", "G#/Ab", "A", "A#/Bb", "B"]
+    key_name = note_names[key_root % 12]
+    key_name += " minor" if is_minor else " major"
+    
+    for i in range(len(inputCounterpoint)):
+        note = inputCounterpoint[i]
+        if note is None:
+            continue
+        scale_degree = (note - key_root) % 12
+        note_name = note_names[note % 12]
+        if is_minor:
+            # Default to natural minor
+            current_scale_to_check = natural_minor_scale
+            # If this note is approached by an ascending step, use melodic minor
+            if i > 0 and inputCounterpoint[i-1] is not None and note > inputCounterpoint[i-1]:
+                current_scale_to_check = melodic_minor_ascending_scale
+            if scale_degree not in current_scale_to_check:
+                findings_list.append(
+                    f"mm {{{i+1}}} note {note_name} (MIDI {note}) is not in {key_name} scale (used {'melodic ascending' if current_scale_to_check == melodic_minor_ascending_scale else 'natural minor'})"
+                )
+        else:  # Major key
+            if scale_degree not in major_scale:
+                findings_list.append(
+                    f"mm {{{i+1}}} note {note_name} (MIDI {note}) is not in {key_name} scale"
+                )
+    
+    if not findings_list:
+        return False
+    else:
+        return True, "\n".join(findings_list)
