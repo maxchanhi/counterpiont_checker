@@ -2,7 +2,16 @@ from get_melody import *
 from checking import *
 from midi_lily import midi_to_lilypond
 import os
+import datetime # Import datetime
+
 conterpoint = r"'CantusFirmus': [60, 62, 65, 64, 65, 67, 69, 67, 64, 62, 60]"
+
+# Sanitize MODEL name for filename and get current date
+safe_model_name = MODEL.replace('/', '_').replace(':', '_')
+today_date = datetime.datetime.now().strftime("%Y-%m-%d")
+output_base_filename = f"{safe_model_name}_{today_date}"
+lilypond_file_name = f"{output_base_filename}.ly"
+pdf_file_name = f"{output_base_filename}.pdf" # Construct PDF filename as well for print statements
 
 # Initial melody generation
 midi_melodies = send_to_llm(conterpoint)
@@ -37,8 +46,8 @@ for i in range(max_iterations):
     if not issues:
         print(f"No counterpoint issues found after {i+1} iterations!")
         # Generate PDF directly
-        midi_to_lilypond(midi_melodies, "final_counterpoint.ly", generate_pdf=True)
-        print("Final counterpoint saved as final_counterpoint.pdf")
+        midi_to_lilypond(midi_melodies, lilypond_file_name, generate_pdf=True)
+        print(f"Final counterpoint saved as {pdf_file_name}")
         break
     
     # If this is the last iteration and we still have issues
@@ -46,8 +55,8 @@ for i in range(max_iterations):
         print("Could not find a perfect solution after 5 iterations.")
         print("Generating PDF with the best solution so far...")
         # Generate PDF with the best solution we have
-        midi_to_lilypond(midi_melodies, "final_counterpoint.ly", generate_pdf=True)
-        print("Final counterpoint saved as final_counterpoint.pdf")
+        midi_to_lilypond(midi_melodies, lilypond_file_name, generate_pdf=True)
+        print(f"Final counterpoint saved as {pdf_file_name}")
         break
     
     # Otherwise, report issues and regenerate
