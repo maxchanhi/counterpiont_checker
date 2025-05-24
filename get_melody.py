@@ -6,7 +6,7 @@ from openai import OpenAI
 EXAMPLE_COUNTERPOINT = [79, 83, 81, 83, 72, 76, 84, 83, 79, 77, 79]
 EXAMPLE_CANTUS_FIRMUS = [60, 62, 65, 64, 65, 67, 69, 67, 64, 62, 60]
 load_dotenv()
-MODEL = "deepseek/deepseek-r1:free"
+MODEL = "microsoft/phi-4-reasoning-plus:free"
 
 def is_same_melody(midi_dict, example_counterpoint=EXAMPLE_COUNTERPOINT):
     """
@@ -69,7 +69,10 @@ def create_fallback_midi():
     }
 
 
-def send_to_llm(conterpoint, comments='None', max_attempts=3):
+def send_to_llm(conterpoint, comments="", max_attempts=3):
+    """
+    Send the counterpoint to the LLM and return the generated MIDI.
+    """
     api_key = os.getenv("OPEN_KEY")
     if not api_key:
         raise ValueError("API key not found in .env file")
@@ -98,6 +101,8 @@ def send_to_llm(conterpoint, comments='None', max_attempts=3):
     attempts_remaining = max_attempts
     
     while attempts_remaining > 0:
+        llm_response = None  # Initialize llm_response for each attempt
+        print(f"\nAttempt {max_attempts - attempts_remaining + 1}/{max_attempts} with model {MODEL}")
         try:
             completion = client.chat.completions.create(
                 model=MODEL,
@@ -108,19 +113,21 @@ def send_to_llm(conterpoint, comments='None', max_attempts=3):
                 ]
             )
             
+            print(f"Raw API completion object: {completion}") # Debug: print raw completion
+
             # Check if completion and choices exist before accessing
             if completion and hasattr(completion, 'choices') and completion.choices:
                 llm_response = completion.choices[0].message.content
-                print(f"Attempt {max_attempts - attempts_remaining + 1}/{max_attempts} - LLM Response:", llm_response)
+                print(f"LLM Response content: {llm_response}") # Debug: print response content
                 
                 midi_melodies = extract_midi_from_response(llm_response)
                 if midi_melodies:
                     return midi_melodies
             else:
-                print(f"Attempt {max_attempts - attempts_remaining + 1}/{max_attempts} - API returned empty or invalid response")
+                print(f"API returned empty or invalid response structure. Completion object: {completion}")
                 
         except Exception as e:
-            print(f"Attempt {max_attempts - attempts_remaining + 1}/{max_attempts} - Error: {str(e)}")
+            print(f"Error during API call: {str(e)}") # Debug: print specific exception
         
         # Enhance the prompt for retry
         system_prompt += ("\n\nIMPORTANT: Your previous response was not in the correct format.\n"
@@ -128,7 +135,12 @@ def send_to_llm(conterpoint, comments='None', max_attempts=3):
                          "keys containing MIDI note arrays.\n")
         
         attempts_remaining -= 1
-        print(llm_response)
+        # Print llm_response only if it has been assigned
+        if llm_response is not None:
+            print(f"Current llm_response before next attempt or fallback: {llm_response}")
+        else:
+            print("llm_response was not assigned in this attempt.")
+
         if attempts_remaining > 0:
             print(f"LLM returned invalid format. Trying again (attempt {max_attempts - attempts_remaining + 1}/{max_attempts})...")
     
