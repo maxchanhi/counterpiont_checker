@@ -387,3 +387,207 @@ def check_key_adherence(inputCounterpoint=[], key_root=60, is_minor=False):
         return False
     else:
         return True, "\n".join(findings_list)
+
+        import collections
+import math # Using math.floor for clarity, though int() truncates (like floor for positive numbers)
+import collections
+def analyze_melody_characteristics(inputMelody):
+    """
+    Analyzes a melody for specific characteristics:
+    1. Note Variety: No single note (MIDI pitch) occupies more than 30% of the melody's
+       actual notes (rests are excluded from this count).
+    2. Apex Location: There is a single occurrence of the melody's highest note (apex)
+       within the window spanning from the 50% position to the 90% position
+       of the melody's total length (inclusive, 0-indexed).
+
+    Args:
+        inputMelody: List of MIDI note numbers for the melody.
+                     `None` values represent rests.
+
+    Returns:
+        - False if all conditions are met.
+        - Tuple (True, report_string) if one or more conditions are not met,
+          where report_string lists all identified issues.
+    """
+    findings_list = []
+
+    if not inputMelody:
+        findings_list.append("Melody is empty. Compose a melody first with notes.")
+        return True, "\n".join(findings_list)  # Return early if melody is empty
+
+    actual_notes = [note for note in inputMelody if note is not None]
+
+
+    num_actual_notes = len(actual_notes)
+    note_counts = collections.Counter(actual_notes)
+    for note_pitch, count in note_counts.items():
+        percentage = (count / num_actual_notes) * 100
+        if percentage > 30:
+            # Find 1-based positions for reporting
+            positions_of_note = [i + 1 for i, n in enumerate(inputMelody) if n == note_pitch]
+            findings_list.append(
+                f"Note Variety: Pitch {note_pitch} occurs too frequently, "
+                f"occupying {percentage:.1f}% of the {num_actual_notes} actual notes "
+                f"(at melody positions: {positions_of_note}). Maximum allowed is 30%."
+            )
+
+    # --- 2. Single Apex in 50%-90% Window Check ---
+    melody_total_length = len(inputMelody) # Total items, including rests
+
+
+    overall_highest_note = max(actual_notes)
+
+    # Find all 0-based indices where the overall_highest_note occurs in the original melody
+    indices_of_overall_highest = [i for i, note in enumerate(inputMelody) if note == overall_highest_note]
+
+    # Define the 0-based index window [50% mark, 90% mark] inclusive for positions.
+    # Example: melody_total_length = 10 (indices 0-9)
+    # window_start_idx = floor(10 * 0.5) = 5
+    # window_end_idx   = floor(10 * 0.9) = 9
+    # This means the window covers indices 5, 6, 7, 8, 9.
+    
+    # For L=1 (index 0): start=floor(0.5)=0, end=floor(0.9)=0. Window: index 0.
+    # For L=2 (indices 0,1): start=floor(1.0)=1, end=floor(1.8)=1. Window: index 1.
+    # This interpretation seems consistent with "position of".
+    window_start_idx = math.floor(melody_total_length * 0.5)
+    window_end_idx = math.floor(melody_total_length * 0.9)
+    
+    # Ensure the window is sensible (e.g., for L=1, start=0, end=0 is fine).
+    # If melody_total_length is 0, this block is skipped by 'if not actual_notes'
+    # or 'if not inputMelody'.
+
+    occurrences_of_highest_in_window = 0
+    positions_in_window_report = [] # 1-based for reporting
+
+    for idx in indices_of_overall_highest:
+        if window_start_idx <= idx <= window_end_idx:
+            occurrences_of_highest_in_window += 1
+            positions_in_window_report.append(idx + 1)
+    
+    # Prepare 1-based indices for reporting the window
+    report_window_start = window_start_idx + 1
+    report_window_end = window_end_idx + 1
+    if melody_total_length == 0 : # Should not happen here due to prior checks.
+            report_window_start = 0
+            report_window_end = 0
+
+
+    if occurrences_of_highest_in_window == 0:
+        all_occurrences_report = [i+1 for i in indices_of_overall_highest]
+        findings_list.append(
+            f"Apex: The highest note ({overall_highest_note}, found at melody positions {all_occurrences_report}) "
+            f"does not occur within the 50%-90% target window "
+            f"(melody positions {report_window_start}-{report_window_end} of {melody_total_length} total items)."
+        )
+    elif occurrences_of_highest_in_window > 1:
+        findings_list.append(
+            f"Apex: The highest note ({overall_highest_note}) occurs multiple times "
+            f"({occurrences_of_highest_in_window} times at melody positions {positions_in_window_report}) "
+            f"within the 50%-90% target window "
+            f"(melody positions {report_window_start}-{report_window_end}). Expected a single occurrence here."
+        )
+    # If occurrences_of_highest_in_window == 1, this condition is met.
+
+    if not findings_list:
+        return False
+    else:
+        return True, "\n".join(findings_list)
+
+if __name__ == '__main__':
+    # Test cases
+    print("--- Test Cases ---")
+
+    # Case 1: All good
+    melody1 = [60, 62, 64, 65, 67, 72, 70, 69, 65, 62] # L=10. Apex 72 at index 5 (pos 6).
+    # Actual notes: 10. No note > 30%.
+    # Apex: Highest 72. Occurs at index 5.
+    # Window: L=10. start_idx = floor(5)=5. end_idx = floor(9)=9. Window indices [5,6,7,8,9].
+    # Index 5 is in window. Single occurrence.
+    print(f"Melody 1: {melody1}")
+    result1 = analyze_melody_characteristics(melody1)
+    print(f"Result: {result1}\n") # Expected: False
+
+    # Case 2: Note variety issue
+    melody2 = [60, 60, 60, 60, 60, 72, 65, 65, 65, 65] # L=10. 60 is 50%, 65 is 40%. Apex 72 at index 5.
+    # Actual notes: 10. 60 (50%), 65 (40%)
+    # Apex: Highest 72. Occurs at index 5. Window [5-9]. OK.
+    print(f"Melody 2: {melody2}")
+    result2 = analyze_melody_characteristics(melody2)
+    print(f"Result: {result2}\n") # Expected: (True, "Note Variety: Pitch 60...\nNote Variety: Pitch 65...")
+
+    # Case 3: Apex not in window
+    melody3 = [72, 60, 62, 64, 65, 67, 70, 69, 65, 62] # L=10. Apex 72 at index 0.
+    # Actual notes: 10. Variety OK.
+    # Apex: Highest 72. Occurs at index 0. Window [5-9]. Not in window.
+    print(f"Melody 3: {melody3}")
+    result3 = analyze_melody_characteristics(melody3)
+    print(f"Result: {result3}\n") # Expected: (True, "Apex: The highest note (72)...does not occur...")
+
+    # Case 4: Multiple apexes in window
+    melody4 = [60, 62, 64, 65, 67, 72, 70, 72, 65, 72] # L=10. Apex 72 at indices 5, 7, 9.
+    # Actual notes: 10. Variety OK.
+    # Apex: Highest 72. Occurs at 5,7,9. Window [5-9]. All 3 in window.
+    print(f"Melody 4: {melody4}")
+    result4 = analyze_melody_characteristics(melody4)
+    print(f"Result: {result4}\n") # Expected: (True, "Apex: The highest note (72)...occurs multiple times...")
+
+    # Case 5: Apex outside window, another occurrence of highest note also outside.
+    melody5 = [72, 60, 62, 64, 65, 67, 70, 69, 65, 72] # L=10. Apex 72 at indices 0, 9.
+    # Actual notes: 10. Variety OK.
+    # Apex: Highest 72. Occurs at 0, 9. Window [5-9]. Index 9 is in window. Single occurrence IN window.
+    print(f"Melody 5: {melody5}")
+    result5 = analyze_melody_characteristics(melody5)
+    print(f"Result: {result5}\n") # Expected: False
+
+    # Case 6: Short melody - passes apex, fails variety
+    melody6 = [60] # L=1.
+    # Actual notes: 1. Variety: 60 is 100%. Fails.
+    # Apex: Highest 60. Occurs at index 0. Window: L=1. start=floor(0.5)=0, end=floor(0.9)=0. Window [0]. OK.
+    print(f"Melody 6: {melody6}")
+    result6 = analyze_melody_characteristics(melody6)
+    print(f"Result: {result6}\n") # Expected: (True, "Note Variety: Pitch 60...")
+
+    # Case 7: Short melody - passes both (e.g. two different notes)
+    melody7 = [60, 70] # L=2
+    # Actual notes: 2. Variety: 60 (50%), 70 (50%). Fails.
+    # Apex: Highest 70. Occurs at index 1. Window: L=2. start=floor(1)=1, end=floor(1.8)=1. Window [1]. OK.
+    print(f"Melody 7: {melody7}")
+    result7 = analyze_melody_characteristics(melody7)
+    print(f"Result: {result7}\n") # Expected: (True, "Note Variety: Pitch 60...\nNote Variety: Pitch 70...")
+    
+    melody7b = [60,70,65] # L=3
+    # Actual notes: 3. Variety: Each 33.33%. Fails for all.
+    # Apex: Highest 70. Index 1. Window: L=3. start=floor(1.5)=1, end=floor(2.7)=2. Window [1,2]. OK.
+    print(f"Melody 7b: {melody7b}")
+    result7b = analyze_melody_characteristics(melody7b)
+    print(f"Result: {result7b}\n") # Expected: (True, "Note Variety: Pitch 60...\nNote Variety: Pitch 70...\nNote Variety: Pitch 65...")
+
+    # Case 8: Melody with rests
+    melody8 = [60, None, 62, None, 72, 65] # L=6. Actual notes = [60,62,72,65] (len 4)
+    # Variety: Each note 1/4 = 25%. OK.
+    # Apex: Highest 72 at original index 4.
+    # Window: L=6. start=floor(3)=3, end=floor(5.4)=5. Window indices [3,4,5].
+    # Index 4 (for note 72) is in window. Single occurrence. OK.
+    print(f"Melody 8: {melody8}")
+    result8 = analyze_melody_characteristics(melody8)
+    print(f"Result: {result8}\n") # Expected: False
+
+    # Case 9: Empty melody
+    melody9 = []
+    print(f"Melody 9: {melody9}")
+    result9 = analyze_melody_characteristics(melody9)
+    print(f"Result: {result9}\n") # Expected: False
+
+    # Case 10: Melody with only rests
+    melody10 = [None, None, None]
+    print(f"Melody 10: {melody10}")
+    result10 = analyze_melody_characteristics(melody10)
+    print(f"Result: {result10}\n") # Expected: (True, "Apex: Melody contains no actual notes...")
+
+    # Case 11: Multiple apexes, one in window, one outside
+    melody11 = [72, 60, 62, 64, 65, 72, 70, 69, 65, 62] # L=10. Apex 72 at indices 0, 5.
+    # Variety OK.
+    # Apex: Highest 72. Occurs at index 0 and 5. Window [5-9]. Index 5 is in window. Single occurrence in window. OK.
+    print(f"Melody 11: {melody11}")
+    result11 = analyze_melody_characteristics(melody11)
+    print(f"Result: {result11}\n") # Expected: False

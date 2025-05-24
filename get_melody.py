@@ -136,23 +136,3 @@ def send_to_llm(conterpoint, comments='None', max_attempts=3):
     print("LLM failed to return valid format after multiple attempts. Returning fallback MIDI.")
     return create_fallback_midi()
 
-
-# For testing the module directly
-if __name__ == "__main__":
-
-
-    example = """
-    \version "2.24.4"
-    \score {
-      \new StaffGroup <<
-        \new Staff = "Counterpoint" << \clef treble \key c \major \time 4/4 \fixed c' { g1 | a1 | g1 | a1 | e1 | g1 | c'1 | b1 | g1 | f1 | g1 } >>
-        \new Staff = "CantusFirmus" << \clef bass \key c \major \time 4/4 \fixed c { c1 | d1 | f1 | e1 | f1 | g1 | a1 | g1 | e1 | d1 | c1 } >>
-      >>
-      \layout { }
-    }
-    """
-    
-    # Test the send_to_llm function
-    result = send_to_llm(example, "There are parallel motives in measures 1-3")
-    print("Final result:")
-    print(result)
