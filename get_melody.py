@@ -6,8 +6,11 @@ from openai import OpenAI
 EXAMPLE_COUNTERPOINT = [79, 83, 81, 83, 72, 76, 84, 83, 79, 77, 79]
 EXAMPLE_CANTUS_FIRMUS = [60, 62, 65, 64, 65, 67, 69, 67, 64, 62, 60]
 load_dotenv()
-MODEL = "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"
-BASE_URL =  "https://api.siliconflow.cn/v1"
+MODEL = "deepseek/deepseek-r1:free"
+BASE_URL = "Pro/deepseek-ai/DeepSeek-R1"#https://openrouter.ai/api/v1
+api_key = os.getenv("SILICONE_KEY")
+if not api_key:
+    raise ValueError("API key not found in .env file")
 def is_same_melody(midi_dict, example_counterpoint=EXAMPLE_COUNTERPOINT):
     """
     Check if the generated melody is too similar to the example.
@@ -73,9 +76,7 @@ def send_to_llm(conterpoint, comments="", max_attempts=3):
     """
     Send the counterpoint to the LLM and return the generated MIDI.
     """
-    api_key = os.getenv("SILICONE_KEY")
-    if not api_key:
-        raise ValueError("API key not found in .env file")
+    
     
     # Initialize OpenAI client with the provided API base URL
     client = OpenAI(

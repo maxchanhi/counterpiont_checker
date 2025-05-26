@@ -24,7 +24,8 @@ def midi_to_lilypond(midi_melodies, output_filename="generated_score.ly", genera
     lilypond_content += "  title = \"First Species Counterpoint Example\"\n"
     lilypond_content += "  subtitle = \"Generated from MIDI Notes\"\n"
     lilypond_content += "}\n\n"
-    lilypond_content += "\\score {\n"
+    lilypond_content += "\score {\n"
+    # lilypond_content += "  \tempo 1 = 80 \n"  # Remove from here
     lilypond_content += "  <<\n"
     
     # Add each voice
@@ -53,8 +54,8 @@ def midi_to_lilypond(midi_melodies, output_filename="generated_score.ly", genera
     
     # Close the score
     lilypond_content += "  >>\n"
-    lilypond_content += "  \\layout { }\n"
-    lilypond_content += "  \\midi { }\n"
+    lilypond_content += "  \layout { }\n"
+    lilypond_content += "  \midi { \\tempo 1 = 80 }\n"  # Corrected typo: empo -> tempo
     lilypond_content += "}\n"
     
     # Write to file

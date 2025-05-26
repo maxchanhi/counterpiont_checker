@@ -422,7 +422,7 @@ def analyze_melody_characteristics(inputMelody):
     note_counts = collections.Counter(actual_notes)
     for note_pitch, count in note_counts.items():
         percentage = (count / num_actual_notes) * 100
-        if percentage > 30:
+        if percentage > 35:
             # Find 1-based positions for reporting
             positions_of_note = [i + 1 for i, n in enumerate(inputMelody) if n == note_pitch]
             findings_list.append(
