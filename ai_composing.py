@@ -18,7 +18,7 @@ midi_melodies = send_to_llm(conterpoint)
 print("Initial melody generated:", midi_melodies)
 
 # Loop to check and refine the counterpoint
-max_iterations = 5
+max_iterations = 6
 for i in range(max_iterations):
     print(midi_melodies)
     parallel_intervals_result = find_parallel_perfect_intervals(midi_melodies['Counterpoint'], midi_melodies['CantusFirmus'])
@@ -29,7 +29,8 @@ for i in range(max_iterations):
     check_octave_unison_rules_result = check_octave_unison_rules(midi_melodies['Counterpoint'], midi_melodies['CantusFirmus'])
     key_adherence_result = check_key_adherence(midi_melodies['Counterpoint'], key_root=60, is_minor=False)  # Adjust key_root/is_minor as needed
     melody_characteristics_result = analyze_melody_characteristics(midi_melodies['Counterpoint'])
-    # Collect all issues
+    check_repeated_notes_result = check_repeated_notes(midi_melodies['Counterpoint'])
+
     issues = []
     if parallel_intervals_result:
         issues.append(parallel_intervals_result[1])
@@ -47,6 +48,8 @@ for i in range(max_iterations):
         issues.append(key_adherence_result[1])
     if melody_characteristics_result:
         issues.append(melody_characteristics_result[1])
+    if check_repeated_notes_result:
+        issues.append(check_repeated_notes_result[1])
     
     # If no issues found, generate PDF and exit loop
     if not issues:
@@ -75,16 +78,4 @@ for i in range(max_iterations):
     # After this line:
     midi_melodies = send_to_llm(conterpoint, feedback)
     
-    # Add this check to ensure we get a different melody:
-    max_attempts = 3
-    attempt = 0
-    original_melody = midi_melodies['Counterpoint'].copy()
     
-    while midi_melodies['Counterpoint'] == original_melody and attempt < max_attempts:
-        print(f"LLM returned the same melody. Trying again (attempt {attempt+1}/{max_attempts})...")
-        midi_melodies = send_to_llm(conterpoint, feedback + "\nIMPORTANT: You MUST create a COMPLETELY DIFFERENT melody.")
-        attempt += 1
-    
-    if midi_melodies['Counterpoint'] == original_melody:
-        print("Warning: LLM failed to generate a different melody after multiple attempts.")
-    print("New melody generated:", midi_melodies)

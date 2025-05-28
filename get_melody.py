@@ -6,15 +6,14 @@ from openai import OpenAI
 EXAMPLE_COUNTERPOINT = [79, 83, 81, 83, 72, 76, 84, 83, 79, 77, 79]
 EXAMPLE_CANTUS_FIRMUS = [60, 62, 65, 64, 65, 67, 69, 67, 64, 62, 60]
 load_dotenv()
-MODEL = "deepseek/deepseek-r1:free"
-BASE_URL = "Pro/deepseek-ai/DeepSeek-R1"#https://openrouter.ai/api/v1
-api_key = os.getenv("SILICONE_KEY")
+MODEL = "google/gemini-2.5-pro-preview"
+BASE_URL = "https://openrouter.ai/api/v1"#"https://api.siliconflow.cn/v1"##"https://api.x.ai/v1"# #"Pro/deepseek-ai/DeepSeek-R1"
+api_key = os.getenv("OPEN_KEY")
 if not api_key:
     raise ValueError("API key not found in .env file")
 def is_same_melody(midi_dict, example_counterpoint=EXAMPLE_COUNTERPOINT):
     """
     Check if the generated melody is too similar to the example.
-    Returns True if more than 70% of notes are the same.
     """
     if not isinstance(midi_dict, dict) or 'Counterpoint' not in midi_dict:
         return False
@@ -25,7 +24,6 @@ def is_same_melody(midi_dict, example_counterpoint=EXAMPLE_COUNTERPOINT):
     if len(counterpoint_midi) != len(example_counterpoint):
         return False
     
-    # Check if more than 70% of notes are the same
     same_notes = sum(1 for a, b in zip(counterpoint_midi, example_counterpoint) if a == b)
     similarity_percentage = same_notes / len(example_counterpoint) * 100
     
@@ -111,7 +109,8 @@ def send_to_llm(conterpoint, comments="", max_attempts=3):
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": "Complete the following first species counterpoint example. \n"
                         + conterpoint + "\n Please fix the problem: " + comments},
-                ]
+                ],
+                temperature=0.8  # Add temperature parameter to increase randomness
             )
             
             print(f"Raw API completion object: {completion}") # Debug: print raw completion
