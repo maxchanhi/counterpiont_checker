@@ -43,7 +43,7 @@ def find_parallel_perfect_intervals(inputCounterpoint, inputCantusFirmus):
     else:
         output_string = ""
         for item in findings_list:
-            output_string += f"mm {{{item}}} find out parallel perfect interval\n"
+            output_string += f"mm {item} find out parallel perfect interval\n"
         # Return True and the formatted string (remove trailing newline)
         return True, output_string.strip()
 
@@ -107,7 +107,7 @@ def find_parallel_motives(inputCounterpoint, inputCantusFirmus, min_consecutive_
     else:
         output_string = ""
         for item in findings_list:
-            output_string += f"mm {{{item}}} find out parallel motives\n"
+            output_string += f"mm {item} find out parallel motives\n"
         # Return True and the formatted string (remove trailing newline)
         return True, output_string.strip()
 
@@ -133,12 +133,12 @@ def check_voice_spacing_crossing_overlapping(inputCounterpoint, inputCantusFirmu
         interval = abs(upper_note_i - lower_note_i)
         if interval > MAX_ALLOWED_INTERVAL:
             findings_list.append(
-                f"mm {{{i+1}}} vertical interval too wide (actual: {interval} semitones, max allowed: {MAX_ALLOWED_INTERVAL})"
+                f"mm {i+1} vertical interval too wide (actual: {interval} semitones, max allowed: {MAX_ALLOWED_INTERVAL})"
             )
 
         elif lower_note_i > upper_note_i:
             findings_list.append(
-                f"mm {{{i+1}}} voice crossing (lower voice at {lower_note_i} is above upper voice at {upper_note_i})"
+                f"mm {i+1} voice crossing (lower voice at {lower_note_i} is above upper voice at {upper_note_i})"
             )
 
         elif i > 0:
@@ -146,12 +146,12 @@ def check_voice_spacing_crossing_overlapping(inputCounterpoint, inputCantusFirmu
             lower_note_prev = inputCantusFirmus[i-1]
             if upper_note_prev is not None and lower_note_i > upper_note_prev:
                 findings_list.append(
-                    f"mm {{{i+1}}} voice overlapping (lower voice at {lower_note_i} is above previous upper voice note at {upper_note_prev}, consider raise an octave or change a note in conterpoint)"
+                    f"mm {i+1} voice overlapping (lower voice at {lower_note_i} is above previous upper voice note at {upper_note_prev}, consider raise an octave or change a note in conterpoint)"
                 )
 
             if lower_note_prev is not None and upper_note_i < lower_note_prev:
                  findings_list.append(
-                    f"mm {{{i+1}}} voice overlapping (upper voice at {upper_note_i} is below previous lower voice note at {lower_note_prev}, consider lower an octave or change a note in conterpoint)"
+                    f"mm {i+1} voice overlapping (upper voice at {upper_note_i} is below previous lower voice note at {lower_note_prev}, consider lower an octave or change a note in conterpoint)"
                 )
 
     if not findings_list:
@@ -199,11 +199,11 @@ def find_dissonant_leaps(inputCounterpoint):
         if leap_size in problematic_leaps_info:
             interval_desc = problematic_leaps_info[leap_size]
             findings_list.append(
-                f"mm {{{measure_start}-{measure_end}}} in Connterpoint: Dissonant melodic movement of {interval_desc}"
+                f"mm {measure_start}-{measure_end} in Connterpoint: Dissonant melodic movement of {interval_desc}"
             )
         elif leap_size > 12: # General large leaps if not already specified
             findings_list.append(
-                f"mm {{{measure_start}-{measure_end}}} in Connterpoint: Very large leap of {leap_size} semitones"
+                f"mm {measure_start}-{measure_end} in Connterpoint: Very large leap of {leap_size} semitones"
             )
 
 
@@ -237,7 +237,7 @@ def check_repeated_notes(inputCounterpoint):
             measure_start = i + 1 # Position of the first note in the repetition
             measure_end = i + 2   # Position of the second note in the repetition
             findings_list.append(
-                f"mm {{{measure_start}-{measure_end}}} in Counterpoint: Note {note1} is repeated consecutively."
+                f"mm {measure_start}-{measure_end} in Counterpoint: Note {note1} is repeated consecutively."
             )
 
     if not findings_list:
@@ -268,12 +268,12 @@ def check_voice_spacing_crossing_overlapping(inputCounterpoint, inputCantusFirmu
         interval = abs(upper_note_i - lower_note_i)
         if interval > MAX_ALLOWED_INTERVAL:
             findings_list.append(
-                f"mm {{{i+1}}} vertical interval too wide (actual: {interval} semitones, max allowed: {MAX_ALLOWED_INTERVAL})"
+                f"mm {i+1} vertical interval too wide (actual: {interval} semitones, max allowed: {MAX_ALLOWED_INTERVAL})"
             )
 
         elif lower_note_i > upper_note_i:
             findings_list.append(
-                f"mm {{{i+1}}} voice crossing (lower voice at {lower_note_i} is above upper voice at {upper_note_i})"
+                f"mm {i+1} voice crossing (lower voice at {lower_note_i} is above upper voice at {upper_note_i})"
             )
 
         elif i > 0:
@@ -281,12 +281,12 @@ def check_voice_spacing_crossing_overlapping(inputCounterpoint, inputCantusFirmu
             lower_note_prev = inputCantusFirmus[i-1]
             if upper_note_prev is not None and lower_note_i > upper_note_prev:
                 findings_list.append(
-                    f"mm {{{i+1}}} voice overlapping (lower voice at {lower_note_i} is above previous upper voice note at {upper_note_prev}, consider raise an octave or change a note in conterpoint)"
+                    f"mm {i+1} voice overlapping (lower voice at {lower_note_i} is above previous upper voice note at {upper_note_prev}, consider raise an octave or change a note in conterpoint)"
                 )
 
             if lower_note_prev is not None and upper_note_i < lower_note_prev:
                  findings_list.append(
-                    f"mm {{{i+1}}} voice overlapping (upper voice at {upper_note_i} is below previous lower voice note at {lower_note_prev}, consider lower an octave or change a note in conterpoint)"
+                    f"mm {i+1} voice overlapping (upper voice at {upper_note_i} is below previous lower voice note at {lower_note_prev}, consider lower an octave or change a note in conterpoint)"
                 )
 
     if not findings_list:
@@ -344,7 +344,7 @@ def find_dissonant_interval(inputCounterpoint = [], inputCantusFirmus = []): #fi
             measure = i + 1  # 1-indexed measure number
             interval_name = dissonant_intervals[interval_type]
             findings_list.append(
-                f"mm {{{measure}}} dissonant vertical interval: {interval_name}"
+                f"mm {measure} dissonant vertical interval: {interval_name}"
             )
     
     if not findings_list:
@@ -395,7 +395,7 @@ def check_octave_unison_rules(inputCounterpoint=[], inputCantusFirmus=[]):
         if interval_type == 0:
             measure = i + 1  # 1-indexed measure number
             findings_list.append(
-                f"mm {{{measure}}} contains octave/unison vertical interval which is only allowed at beginning and end"
+                f"mm {measure} contains octave/unison vertical interval which is only allowed at beginning and end"
             )
     
     # Check last interval
@@ -408,7 +408,7 @@ def check_octave_unison_rules(inputCounterpoint=[], inputCantusFirmus=[]):
         
         if last_interval_type != 0:  # Not octave or unison
             findings_list.append(
-                f"mm {{{length}}} (final measure) does not end with octave or unison interval"
+                f"mm {length} (final measure) does not end with octave or unison interval"
             )
     
     if not findings_list:
@@ -459,12 +459,12 @@ def check_key_adherence(inputCounterpoint=[], key_root=60, is_minor=False):
                 current_scale_to_check = melodic_minor_ascending_scale
             if scale_degree not in current_scale_to_check:
                 findings_list.append(
-                    f"mm {{{i+1}}} note {note_name} (MIDI {note}) is not in {key_name} scale (used {'melodic ascending' if current_scale_to_check == melodic_minor_ascending_scale else 'natural minor'})"
+                    f"mm {i+1} note {note_name} (MIDI {note}) is not in {key_name} scale (used {'melodic ascending' if current_scale_to_check == melodic_minor_ascending_scale else 'natural minor'})"
                 )
         else:  # Major key
             if scale_degree not in major_scale:
                 findings_list.append(
-                    f"mm {{{i+1}}} note {note_name} (MIDI {note}) is not in {key_name} scale"
+                    f"mm {i+1} note {note_name} (MIDI {note}) is not in {key_name} scale"
                 )
     
     if not findings_list:
@@ -510,69 +510,57 @@ def analyze_melody_characteristics(inputMelody):
             positions_of_note = [i + 1 for i, n in enumerate(inputMelody) if n == note_pitch]
             findings_list.append(
                 f"Note Variety: Pitch {note_pitch} occurs too frequently, "
-                f"occupying {percentage:.1f} percent of the {num_actual_notes} actual notes "
-                f"(at melody positions: {positions_of_note}). Maximum allowed is 40%."
+                f"occupying {percentage:.1f}%% of the {num_actual_notes} actual notes "
+                f"(at melody positions: {positions_of_note}). Maximum allowed is 40%%."
             )
 
     # --- 2. Single Apex in 50%-90% Window Check ---
     melody_total_length = len(inputMelody) # Total items, including rests
-
-
     overall_highest_note = max(actual_notes)
 
     # Find all 0-based indices where the overall_highest_note occurs in the original melody
     indices_of_overall_highest = [i for i, note in enumerate(inputMelody) if note == overall_highest_note]
 
-    # Define the 0-based index window [50% mark, 90% mark] inclusive for positions.
-    # Example: melody_total_length = 10 (indices 0-9)
-    # window_start_idx = floor(10 * 0.5) = 5
-    # window_end_idx   = floor(10 * 0.9) = 9
-    # This means the window covers indices 5, 6, 7, 8, 9.
-    
-    # For L=1 (index 0): start=floor(0.5)=0, end=floor(0.9)=0. Window: index 0.
-    # For L=2 (indices 0,1): start=floor(1.0)=1, end=floor(1.8)=1. Window: index 1.
-    # This interpretation seems consistent with "position of".
-    window_start_idx = math.floor(melody_total_length * 0.5)
-    window_end_idx = math.floor(melody_total_length * 0.9)
-    
-    # Ensure the window is sensible (e.g., for L=1, start=0, end=0 is fine).
-    # If melody_total_length is 0, this block is skipped by 'if not actual_notes'
-    # or 'if not inputMelody'.
-
-    occurrences_of_highest_in_window = 0
-    positions_in_window_report = [] # 1-based for reporting
-
-    for idx in indices_of_overall_highest:
-        if window_start_idx <= idx <= window_end_idx:
-            occurrences_of_highest_in_window += 1
-            positions_in_window_report.append(idx + 1)
-    
-    # Prepare 1-based indices for reporting the window
-    report_window_start = window_start_idx + 1
-    report_window_end = window_end_idx + 1
-    if melody_total_length == 0 : # Should not happen here due to prior checks.
-            report_window_start = 0
-            report_window_end = 0
-
-
-    if occurrences_of_highest_in_window == 0:
+    # First check: There should be only one apex in the entire melody
+    if len(indices_of_overall_highest) > 1:
         all_occurrences_report = [i+1 for i in indices_of_overall_highest]
         findings_list.append(
-            f"Apex: The highest note ({overall_highest_note}, found at melody positions {all_occurrences_report}) "
-            f"does not occur within the 50%-90% target window "
-            f"(melody positions {report_window_start}-{report_window_end} of {melody_total_length} total items)."
+            f"Apex: Multiple occurrences of the highest note ({overall_highest_note}) "
+            f"found at melody positions {all_occurrences_report}. "
+            f"There should be only one apex in the melody."
         )
-    elif occurrences_of_highest_in_window > 1:
-        findings_list.append(
-            f"Apex: The highest note ({overall_highest_note}) occurs multiple times "
-            f"({occurrences_of_highest_in_window} times at melody positions {positions_in_window_report}) "
-            f"within the 50%-90% target window "
-            f"(melody positions {report_window_start}-{report_window_end}). Expected a single occurrence here."
-        )
-    # If occurrences_of_highest_in_window == 1, this condition is met.
+    else:
+        # If there's only one apex, check if it's in the correct window
+        window_start_idx = math.floor(melody_total_length * 0.5)
+        window_end_idx = math.floor(melody_total_length * 0.9)
+        
+        occurrences_of_highest_in_window = 0
+        positions_in_window_report = [] # 1-based for reporting
+
+        for idx in indices_of_overall_highest:
+            if window_start_idx <= idx <= window_end_idx:
+                occurrences_of_highest_in_window += 1
+                positions_in_window_report.append(idx + 1)
+        
+        # Prepare 1-based indices for reporting the window
+        report_window_start = window_start_idx + 1
+        report_window_end = window_end_idx + 1
+        if melody_total_length == 0 : # Should not happen here due to prior checks.
+                report_window_start = 0
+                report_window_end = 0
+
+        if occurrences_of_highest_in_window == 0:
+            all_occurrences_report = [i+1 for i in indices_of_overall_highest]
+            findings_list.append(
+                f"Apex: The highest note ({overall_highest_note}, found at melody positions {all_occurrences_report}) "
+                f"does not occur within the 50-90 percent target window "
+                f"(melody positions {report_window_start}-{report_window_end} of {melody_total_length} total items)."
+            )
 
     if not findings_list:
         return False
     else:
         return True, "\n".join(findings_list)
 
+if __name__ == "__main__":
+    print(analyze_melody_characteristics([72, 69, 74, 72, 69, 71, 72, 71, 67, 69, 72]))

@@ -19,9 +19,9 @@ from checking import (
 EXAMPLE_COUNTERPOINT = [79, 83, 81, 83, 72, 76, 84, 83, 79, 77, 79]
 EXAMPLE_CANTUS_FIRMUS = [60, 62, 65, 64, 65, 67, 69, 67, 64, 62, 60]
 load_dotenv()
-MODEL = "grok-3"
-BASE_URL = "https://api.x.ai/v1"#"https://openrouter.ai/api/v1"#"https://api.siliconflow.cn/v1"#"https://api.siliconflow.cn/v1"##" #"Pro/deepseek-ai/DeepSeek-R1"
-api_key = os.getenv("GROK_API")
+MODEL = "deepseek/deepseek-r1-0528"
+BASE_URL ="https://openrouter.ai/api/v1"# "https://api.x.ai/v1"##"https://api.siliconflow.cn/v1"#"https://api.siliconflow.cn/v1"##" #"Pro/deepseek-ai/DeepSeek-R1"
+api_key = os.getenv("OPEN_API")
 if not api_key:
     raise ValueError("API key not found in .env file")
 def is_same_melody(midi_dict, example_counterpoint=EXAMPLE_COUNTERPOINT):
@@ -142,22 +142,8 @@ def extract_midi_from_response(response_text):
     return None
 
 
-def create_fallback_midi():
-    """
-    Create a fallback MIDI dictionary when LLM fails to return proper format.
-    Returns a dictionary with slightly modified counterpoint from the example.
-    """
-    # Create a slightly different counterpoint from the example
-    modified_counterpoint = [note + (1 if i % 2 == 0 else -1) 
-                            for i, note in enumerate(EXAMPLE_COUNTERPOINT)]
-    
-    return {
-        'Counterpoint': modified_counterpoint,
-        'CantusFirmus': EXAMPLE_CANTUS_FIRMUS
-    }
 
-
-def send_to_llm(conterpoint, initial_comments="", max_attempts=3, use_checking=True):
+def send_to_llm(conterpoint, initial_comments="", max_attempts=5, use_checking=True):
     """
     Send the counterpoint to the LLM and return the generated MIDI.
     Optionally uses checking.py to refine the output.
@@ -187,19 +173,14 @@ def send_to_llm(conterpoint, initial_comments="", max_attempts=3, use_checking=T
 
     current_comments = initial_comments
     attempts_remaining = max_attempts
-    generated_midi = None
 
     while attempts_remaining > 0:
         llm_response = None # Initialize llm_response here for each attempt
         system_prompt = system_prompt_base
         user_content = f"Complete the following first species counterpoint example. \n{conterpoint}"
-        if current_comments:
-            user_content += f"\nPlease fix the following problems based on the previous attempt: {current_comments}"
-        
-        print(f"\nAttempt {max_attempts - attempts_remaining + 1}/{max_attempts} with model {MODEL}")
-        if current_comments:
-            print(f"Sending with comments: {current_comments}")
+        user_content += f"\nPlease fix the following problems based on the previous attempt: {current_comments}"
 
+        print(f"Sending with comments: {current_comments}")
         try:
             completion = client.chat.completions.create(
                 model=MODEL,
@@ -210,61 +191,62 @@ def send_to_llm(conterpoint, initial_comments="", max_attempts=3, use_checking=T
                 temperature=0.8 
             )
             
-            print(f"Raw API completion object: {completion}")
-
-            if completion and hasattr(completion, 'choices') and completion.choices:
-                llm_response = completion.choices[0].message.content
-                print(f"LLM Response content: {llm_response}")
-                
-                midi_melodies = extract_midi_from_response(llm_response)
-                if midi_melodies:
-                    if use_checking:
-                        print("Checking generated MIDI...")
-                        cp = midi_melodies.get('Counterpoint', [])
-                        cf = midi_melodies.get('CantusFirmus', [])
-                        all_feedback = []
-
-                        # Run all checks from checking.py
-                        checks = [
-                            (find_parallel_perfect_intervals, (cp, cf)),
-                            (find_parallel_motives, (cp, cf)),
-                            (check_voice_spacing_crossing_overlapping, (cp, cf)),
-                            (find_dissonant_leaps, (cp,)),
-                            (check_repeated_notes, (cp,)),
-                            (find_dissonant_interval, (cp, cf)),
-                            (check_octave_unison_rules, (cp, cf)),
-                            (check_key_adherence, (cp,60)),
-                            (analyze_melody_characteristics, (cp,)),
-                        ]
-
-                        for func, args in checks:
-                            result = func(*args)
-                            if isinstance(result, tuple) and result[0]: # Check returned True and a message
-                                all_feedback.append(result[1])
-                        print("all_feedback",all_feedback)
-                        if all_feedback:
-                            current_comments = "\n".join(all_feedback)
-                            print(f"Found issues: {current_comments}")
-                            # Decrement attempts and continue to retry with feedback
-                            attempts_remaining -= 1
-                            if attempts_remaining == 0:
-                                print("Max attempts reached after checking. Returning last valid MIDI or fallback.")
-                                generated_midi = midi_melodies # Return the last problematic one if all retries used
-                                break
-                            system_prompt_base += ("\n\nIMPORTANT: Your previous response had rule violations. "
-                                                 "Please address the feedback.")
-                            continue # Go to next iteration of the while loop to resend with comments
-                        else:
-                            print("No issues found by checking.py or all issues resolved.")
-                            return midi_melodies # Good MIDI found
-                    else: # Not using checking, return as is
-                        return midi_melodies
-            else:
-                print(f"API returned empty or invalid response structure. Completion object: {completion}")
-                
+            llm_response = completion.choices[0].message.content
+            print(f"LLM Response content: {llm_response}")
+            
         except Exception as e:
-            print(f"Error during API call: {e!r}") # Use !r to get the repr() of e, or simply print("Error during API call:", e)
+            print(f"Error calling LLM API: {e}")
+            if attempts_remaining < max_attempts - 1:
+                print(f"Retrying... (attempt {attempts_remaining + 1}/{max_attempts})")
+                continue
+            else:
+                print("Max attempts reached. Returning fallback result.")
+                # Return a proper tuple instead of None
+                if use_checking:
+                    return "Error: API failed after max attempts", conterpoint if conterpoint else None
+                else:
+                    return "Error: API failed after max attempts", None
         
+        midi_melodies = extract_midi_from_response(llm_response)
+        print(use_checking, midi_melodies)
+        if use_checking and midi_melodies:
+            print("Checking generated MIDI...")
+            cp = midi_melodies.get('Counterpoint', [])
+            cf = midi_melodies.get('CantusFirmus', [])
+            all_feedback = []
+
+            # Run all checks from checking.py
+            checks = [
+                (find_parallel_perfect_intervals, (cp, cf)),
+                (find_parallel_motives, (cp, cf)),
+                (check_voice_spacing_crossing_overlapping, (cp, cf)),
+                (find_dissonant_leaps, (cp,)),
+                (check_repeated_notes, (cp,)),
+                (find_dissonant_interval, (cp, cf)),
+                (check_octave_unison_rules, (cp, cf)),
+                (check_key_adherence, (cp,60)),
+                (analyze_melody_characteristics, (cp,)),
+            ]
+
+            for func, args in checks:
+                result = func(*args)
+                if isinstance(result, tuple) and result[0]: # Check returned True and a message
+                    all_feedback.append(result[1])
+            if all_feedback:
+                current_comments = "\n".join(all_feedback)
+                attempts_remaining -= 1
+                if attempts_remaining == 0:
+                    print("Max attempts reached after checking. Returning last valid MIDI or fallback.")
+                    return "Failed Output", midi_melodies # Return the last problematic one if all retries used
+                system_prompt_base += ("\n\nIMPORTANT: Your previous response had rule violations. "
+                                        "Please address the feedback.")
+                continue # Go to next iteration of the while loop to resend with comments
+            else:
+                print("No issues found by checking.py or all issues resolved.")
+                return "Successful Output",midi_melodies # Good MIDI found
+        elif use_checking == False and midi_melodies:  # Add this condition to return midi_melodies when use_checking is False
+            return "Raw Output",midi_melodies
+      
         system_prompt_base += ("\n\nIMPORTANT: Your previous response was not in the correct format or had issues."
                                "You MUST return a dictionary with 'Counterpoint' and 'CantusFirmus' "
                                "keys containing MIDI note arrays, and adhere to counterpoint rules.")
@@ -274,13 +256,15 @@ def send_to_llm(conterpoint, initial_comments="", max_attempts=3, use_checking=T
             print(f"Current llm_response before next attempt or fallback: {llm_response}")
         else:
             print("llm_response was not assigned in this attempt.")
-
+    
         if attempts_remaining > 0:
             print(f"LLM returned invalid format or issues found. Trying again (attempt {max_attempts - attempts_remaining + 1}/{max_attempts})...")
     
-    if generated_midi: # If we broke from checking loop with a midi
-        return generated_midi
-
-    print("LLM failed to return valid format or resolve issues after multiple attempts. Returning fallback MIDI.")
-    return create_fallback_midi()
-
+    
+if __name__ == "__main__":
+    testcounterpoint = {'Counterpoint': 
+                        [60, 62, 65, 64, 65, 67, 69, 67, 64, 62, 60],
+                        'CantusFirmus':
+                         [60, 62, 65, 64, 65, 67, 69, 67, 64, 62, 60]}
+    result= send_to_llm(conterpoint=testcounterpoint,use_checking=True)
+    print("test result: ",result)
