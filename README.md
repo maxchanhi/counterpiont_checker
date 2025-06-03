@@ -10,7 +10,7 @@ This project leverages large language models (LLMs) to create musical compositio
 
 ## Counterpoint Rule Validation
 - Parallel Perfect Intervals Detection : Identifies consecutive perfect intervals (unisons, octaves, fourths, fifths) moving in the same direction, which are generally avoided in good counterpoint.
-- Parallel Motives Analysis : Detects when both voices move in parallel motion for three or more consecutive notes, which can create an undesirable homophonic texture.
+- Parallel Motives Analysis : Detects when both voices move in parallel motion for three or more consecutive notes.
 - Voice Spacing and Crossing : Ensures proper vertical spacing between voices (not exceeding an octave and a major third) and prevents voice crossing or overlapping.
 - Dissonant Leaps : Identifies problematic melodic movements such as tritones, sevenths, and other dissonant intervals that should be handled with care in counterpoint.
 - Repeated Notes : Flags consecutive repetitions of the same pitch, which can diminish melodic interest.
