@@ -193,7 +193,9 @@ def send_to_llm(conterpoint, initial_comments="", max_attempts=5, use_checking=T
             
             llm_response = completion.choices[0].message.content
             print(f"LLM Response content: {llm_response}")
-            
+            if llm_response is None:
+                print(completion)
+                
         except Exception as e:
             print(f"Error calling LLM API: {e}")
             if attempts_remaining < max_attempts - 1:
@@ -261,10 +263,3 @@ def send_to_llm(conterpoint, initial_comments="", max_attempts=5, use_checking=T
             print(f"LLM returned invalid format or issues found. Trying again (attempt {max_attempts - attempts_remaining + 1}/{max_attempts})...")
     
     
-if __name__ == "__main__":
-    testcounterpoint = {'Counterpoint': 
-                        [60, 62, 65, 64, 65, 67, 69, 67, 64, 62, 60],
-                        'CantusFirmus':
-                         [60, 62, 65, 64, 65, 67, 69, 67, 64, 62, 60]}
-    result= send_to_llm(conterpoint=testcounterpoint,use_checking=True)
-    print("test result: ",result)
